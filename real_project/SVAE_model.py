@@ -24,28 +24,20 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 # PACCMANN stuff
-from paccmann.paccmann_chemistry.paccmann_chemistry.models import (
+from neural_net_pharm.paccmann_chemistry.paccmann_chemistry.models import (
     StackGRUEncoder, StackGRUDecoder, TeacherVAE)
 
-from paccmann.paccmann_chemistry.paccmann_chemistry.logger import Logger
-from paccmann.paccmann_chemistry.paccmann_chemistry.training import train_vae
-from paccmann.paccmann_chemistry.paccmann_chemistry.utils import collate_fn, get_device
+from neural_net_pharm.paccmann_chemistry.paccmann_chemistry.logger import Logger
+from neural_net_pharm.paccmann_chemistry.paccmann_chemistry.training import train_vae
+from neural_net_pharm.paccmann_chemistry.paccmann_chemistry.utils import collate_fn, get_device
+from pytoda.smiles.smiles_language import SMILESLanguage
+from pytoda.datasets import SMILESDataset
 
-# real coding
-params = dict()
-with open('params.json') as f:
-    params.update(json.load(f))
-
-# get params
-
-# datasets
-train_smiles_filepath = 'data/train_smiles.csv'
-test_smiles_filepath = 'data/test_smiles.csv'
 
 # init logger and model filepaths
 training_name = 'SVAE_train_model'
 
-logger = Logger(logdir='general_logs/')  # initialize logger as an object
+logger = Logger(logdir='logs/general_logs')  # initialize logger as an object
 logger.info(f'Model with name {training_name} starts.')
 
 # model_dir = os.path.join(model_path, training_name) - useless line from initial paccmann script
@@ -60,55 +52,60 @@ os.makedirs(val_dir, exist_ok=True)
 train_logger = Logger(log_path)
 val_logger = Logger(val_dir)
 
-# to date, this is a trash
-# Load SMILES language
-# smiles_language = SMILESLanguage.load(smiles_language_filepath)
-#
-# # todo: set the following to params.json
-# params.update(
-# {
-# 'input_size': smiles_language.number_of_tokens,
-# 'output_size': smiles_language.number_of_tokens,
-# 'pad_index': smiles_language.padding_index
-# }
-# )
-# todo: {
-#  SMILES dictionary params(dict length), input size, output size, padding index}
-# the coordinate of zero vector (not necessary, can set it to 0)
+# get params
+params = dict()
+with open('params.json') as f:
+    params.update(json.load(f))
+
+# datasets
+train_smiles_filepath = 'data/train_smiles.csv'
+test_smiles_filepath = 'data/test_smiles.csv'
+
+# SMILES language
+smiles_language = SMILESLanguage.load('data/Mol_dataset.csv')
+
+params.update(
+            {
+                'input_size': smiles_language.number_of_tokens,
+                'output_size': smiles_language.number_of_tokens,
+                'pad_index': smiles_language.padding_index
+            }
+        )
 
 # create SMILES eager dataset
-# smiles_train_data = SMILESDataset(
-# train_smiles_filepath,
-# smiles_language=smiles_language,
-# padding=False,
-# add_start_and_stop=params.get('start_stop', True),
-# backend='eager'
-# )
-# smiles_test_data = SMILESDataset(
-# test_smiles_filepath,
-# smiles_language=smiles_language,
-# padding=False,
-# add_start_and_stop=params.get('start_stop', True),
-# backend='eager'
-# )
-# vocab_dict = smiles_language.index_to_token
-# params.update(
-# {
-# 'start_index':
-# list(vocab_dict.keys())
-# [list(vocab_dict.values()).index('<START>')],
-# 'end_index':
-# list(vocab_dict.keys())
-# [list(vocab_dict.values()).index('<STOP>')]
-# }
-# )
-# with open(os.path.join(model_dir, 'model_params.json'), 'w') as fp:
-#     json.dump(params, fp)
+smiles_train_data = SMILESDataset(
+                        train_smiles_filepath,
+                        smiles_language=smiles_language,
+                        padding=False,
+                        add_start_and_stop=params.get('start_stop', True),
+                        backend='eager'
+)
+smiles_test_data = SMILESDataset(
+                        test_smiles_filepath,
+                        smiles_language=smiles_language,
+                        padding=False,
+                        add_start_and_stop=params.get('start_stop', True),
+                        backend='eager'
+)
+
+vocab_dict = smiles_language.index_to_token
+
+params.update(
+                {
+                    'start_index':
+                    list(vocab_dict.keys())
+                    [list(vocab_dict.values()).index('<START>')],
+                    'end_index':
+                    list(vocab_dict.keys())
+                    [list(vocab_dict.values()).index('<STOP>')]
+                }
+)
+
+with open(os.path.join(model_dir, 'model_params.json'), 'w') as fp:
+    json.dump(params, fp)
+
 
 # create DataLoaders
-smiles_train_data = pd.read_csv(train_smiles_filepath)
-smiles_test_data = pd.read_csv(test_smiles_filepath)
-
 train_data_loader = DataLoader(
     smiles_train_data,
     batch_size=params.get('batch_size', 64),
