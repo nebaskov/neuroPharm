@@ -1,1 +1,0 @@
-print('Initializing __init__.py for PACCMANN')

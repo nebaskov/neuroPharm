@@ -6,7 +6,7 @@ import pandas as pd
 from rdkit.Chem import PandasTools
 from tensorboard.notebook import display
 
-from neural_net_pharm.paccmann_chemistry.paccmann_chemistry.models import (
+from paccmann.paccmann_chemistry.paccmann_chemistry.models import (
     StackGRUEncoder, StackGRUDecoder, TeacherVAE)
 
 model_path = "SVAE_train_model/weights/best_loss.pt"
